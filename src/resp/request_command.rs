@@ -17,7 +17,7 @@ impl TryFrom<&str> for RequestCommand {
     type Error = RequestCommandError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        return match value.trim() {
+        return match value.trim().to_uppercase().as_str() {
             "PING" => Ok(Self::Ping),
             _ => Err(RequestCommandError::ParseError(value.to_string())),
         };
