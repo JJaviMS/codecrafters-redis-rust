@@ -1,5 +1,6 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use anyhow::Ok;
 use thiserror::Error;
 
 use crate::resp::request_command::RequestCommandError;
@@ -31,6 +32,10 @@ impl ClientConnection {
         loop {
             let read_bytes = self.client_stream.read(&mut read_buffer)?;
             let read_command = std::str::from_utf8(&read_buffer[..read_bytes]).unwrap();
+
+            if read_buffer[0] == b'\0'{
+                return Result::Ok(());
+            }
 
             let command = RequestCommand::try_from(read_command)?;
 
