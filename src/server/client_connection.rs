@@ -31,11 +31,14 @@ impl ClientConnection {
         let mut read_buffer: [u8; 1024] = [0; 1024];
         loop {
             let read_bytes = self.client_stream.read(&mut read_buffer)?;
-            let read_command = std::str::from_utf8(&read_buffer[..read_bytes]).unwrap();
 
-            if read_buffer[0] == b'\0'{
+            if read_bytes == 0 || read_buffer[0] == b'\0'{
                 return Result::Ok(());
             }
+
+            let read_command = std::str::from_utf8(&read_buffer[..read_bytes]).unwrap();
+
+            
 
             let command = RequestCommand::try_from(read_command)?;
 
