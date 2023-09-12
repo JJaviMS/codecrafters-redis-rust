@@ -1,5 +1,6 @@
-
 use std::net::TcpListener;
+pub(crate) mod resp;
+pub(crate) mod server;
 
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -8,14 +9,7 @@ fn main() {
     
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
     
-    for stream in listener.incoming() {
-        match stream {
-            Ok(_stream) => {
-                println!("accepted new connection");
-            }
-            Err(e) => {
-                println!("error: {}", e);
-            }
-        }
-    }
+    let server = server::server::Server::new(listener);
+
+    server.run();
 }
