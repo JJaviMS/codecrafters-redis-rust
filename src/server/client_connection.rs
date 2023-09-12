@@ -50,12 +50,6 @@ impl ClientConnection {
                     println!("Received invalid command");
                 }
             }
-
-            
-
-            
-
-            
         }
     }
 
