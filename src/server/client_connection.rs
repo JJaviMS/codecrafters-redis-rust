@@ -41,9 +41,16 @@ impl ClientConnection {
 
             println!("Read from client: {}", read_command);
 
-            let command = RequestCommand::try_from(read_command)?;
+            let command = RequestCommand::try_from(read_command);
 
-            command.handle_command(self)
+            if let Ok(command) = command  {
+                println!("Received correct command");
+                command.handle_command(self)
+            } else {
+                println!("Received invalid command");
+            }
+
+            
         }
     }
 
