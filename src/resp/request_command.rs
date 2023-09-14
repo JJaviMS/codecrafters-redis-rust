@@ -25,15 +25,15 @@ impl TryFrom<&str> for RequestCommand {
 }
 
 impl RequestCommand {
-    pub(crate) fn handle_command(&self, client: &mut ClientConnection) {
+    pub(crate) async fn handle_command(&self, client: &mut ClientConnection) {
         match self {
-            Self::Ping => handle_ping(client),
+            Self::Ping => handle_ping(client).await,
         }
     }
 }
 
-fn handle_ping(client: &mut ClientConnection) {
+async fn handle_ping(client: &mut ClientConnection) {
     println!("Answering to ping");
 
-    client.send_to_client("+PONG\r\n");
+    client.send_to_client("+PONG\r\n").await;
 }

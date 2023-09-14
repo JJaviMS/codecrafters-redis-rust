@@ -1,5 +1,5 @@
-use std::io::{Read, Write};
-use std::net::TcpStream;
+use tokio::net::TcpStream;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use thiserror::Error;
 
 use crate::resp::request_command::RequestCommandError;
@@ -26,11 +26,11 @@ impl ClientConnection {
         };
     }
 
-    pub(crate) fn handle_client(&mut self) -> Result<(), ClientError> {
+    pub(crate) async fn handle_client(&mut self) -> Result<(), ClientError> {
         let mut read_buffer: [u8; 1024] = [0; 1024];
         loop {
             println!("Reading from the client");
-            let read_bytes = self.client_stream.read(&mut read_buffer)?;
+            let read_bytes = self.client_stream.read(&mut read_buffer).await?;
 
             if read_bytes == 0 || read_buffer[0] == b'\0'{
                 println!("Connection closed by the client");
@@ -45,7 +45,7 @@ impl ClientConnection {
                 let command = RequestCommand::try_from(line);
                 if let Ok(command) = command  {
                     println!("Received correct command");
-                    command.handle_command(self)
+                    command.handle_command(self).await
                 } else {
                     println!("Received invalid command");
                 }
@@ -53,9 +53,9 @@ impl ClientConnection {
         }
     }
 
-    pub(crate) fn send_to_client(&mut self, data: &str) {
+    pub(crate) async fn send_to_client(&mut self, data: &str) {
         println!("Sending {} to the client", data);
 
-        self.client_stream.write(data.as_bytes()).unwrap();
+        self.client_stream.write(data.as_bytes()).await.unwrap();
     }
 }
