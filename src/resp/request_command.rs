@@ -1,26 +1,61 @@
-use super::super::server::client_connection::ClientConnection;
+use super::{super::server::client_connection::ClientConnection, frames::Frame};
 use thiserror::Error;
 
 #[derive(Debug)]
 pub(crate) enum RequestCommand {
     Ping,
+    Echo(String),
 }
 
 #[derive(Debug, Error)]
 
 pub(crate) enum RequestCommandError {
-    #[error("Error parsing the command: \"{0}\"")]
-    ParseError(String),
+    #[error("Error parsing frames to commands")]
+    ParseFramesError,
+
+    #[error("not supported or unknown command")]
+    UnknowCommand,
 }
 
-impl TryFrom<&str> for RequestCommand {
+impl TryFrom<Frame> for RequestCommand {
     type Error = RequestCommandError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        return match value.trim().to_uppercase().as_str() {
-            "PING" => Ok(Self::Ping),
-            _ => Err(RequestCommandError::ParseError(value.to_string())),
-        };
+    fn try_from(value: Frame) -> Result<Self, Self::Error> {
+        if let Frame::Array(value) = value {
+            if value.len() == 0 {
+                return Err(RequestCommandError::ParseFramesError);
+            }
+
+            if let Frame::BulkString(command) = &value[0] {
+                let command: Self = match command.to_ascii_lowercase().as_str() {
+                    "ping" => Self::Ping,
+                    "echo" => {
+                        if value.len() < 2 {
+                            return Err(RequestCommandError::ParseFramesError);
+                        }
+
+                        let echo_string: &String;
+
+                        if let Frame::BulkString(echo) = &value[1] {
+                            echo_string = echo;
+                        } else if let Frame::SimpleString(echo) = &value[1] {
+                            echo_string = echo;
+                        } else {
+                            return Err(RequestCommandError::ParseFramesError);
+                        }
+
+                        Self::Echo(echo_string.to_owned())
+                    }
+
+                    _ => return Err(RequestCommandError::UnknowCommand),
+                };
+                return Ok(command);
+            } else {
+                return Err(RequestCommandError::ParseFramesError);
+            }
+        } else {
+            return Err(RequestCommandError::ParseFramesError);
+        }
     }
 }
 
@@ -28,6 +63,7 @@ impl RequestCommand {
     pub(crate) async fn handle_command(&self, client: &mut ClientConnection) {
         match self {
             Self::Ping => handle_ping(client).await,
+            Self::Echo(response) => handle_echo(client, response).await,
         }
     }
 }
@@ -36,4 +72,12 @@ async fn handle_ping(client: &mut ClientConnection) {
     println!("Answering to ping");
 
     client.send_to_client("+PONG\r\n").await;
+}
+
+async fn handle_echo(client: &mut ClientConnection, response: &str) {
+    println!("Answering to echo");
+
+    let answer = format!("{}\r\n", response);
+
+    client.send_to_client(&answer).await;
 }

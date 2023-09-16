@@ -2,7 +2,6 @@ use bytes::Buf;
 use std::{
     io::Cursor,
     str::{from_utf8, Utf8Error},
-    string::FromUtf8Error,
 };
 use thiserror::Error;
 
@@ -84,7 +83,7 @@ impl Frame {
 
                 let mut final_vec = Vec::with_capacity(expecting_size);
 
-                for i in 0..expecting_size {
+                for _ in 0..expecting_size {
                     let result = Self::parse_from_buf(src)?;
                     final_vec.push(result);
                 }

@@ -5,7 +5,8 @@ use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::resp::command::{Frame, FrameParseError};
+use crate::resp::frames::{Frame, FrameParseError};
+use crate::resp::request_command::{RequestCommand, RequestCommandError};
 
 #[derive(Debug, Error)]
 pub(crate) enum ClientError {
@@ -14,6 +15,9 @@ pub(crate) enum ClientError {
 
     #[error("Invalid command from the client")]
     ParseCommandError(#[from] FrameParseError),
+
+    #[error("The command could not be handled")]
+    CommandError(#[from] RequestCommandError),
 
     #[error("connection reset")]
     ConnectionReset,
@@ -39,7 +43,7 @@ impl ClientConnection {
         loop {
             match self.read_frame().await {
                 Ok(Some(frame)) => {
-                    self.handle_frame(frame).await?;
+                    RequestCommand::try_from(frame)?.handle_command(self);
                 }
 
                 Err(ClientError::ConnectionReset) => {
@@ -79,9 +83,8 @@ impl ClientConnection {
     }
 
     fn parse_frame(&mut self) -> Result<Option<Frame>, FrameParseError> {
-
-        if !self.buffer.has_remaining(){
-            return Ok(None)
+        if !self.buffer.has_remaining() {
+            return Ok(None);
         }
 
         let mut buf = Cursor::new(&self.buffer[..]);
@@ -99,24 +102,6 @@ impl ClientConnection {
             Err(e) => {
                 return Err(e);
             }
-        }
-    }
-
-    async fn handle_frame(&mut self, frame: Frame) -> Result<(), ClientError> {
-        if let Frame::Array(frames) = frame {
-            if let (Frame::BulkString(first), Frame::BulkString(second)) = (&frames[0], &frames[1])
-            {
-                if first.to_ascii_lowercase() == "echo" {
-                    self.send_to_client(&second).await?;
-                    return Ok(());
-                } else {
-                    return Err(ClientError::NotImplemented);
-                }
-            } else {
-                return Err(ClientError::NotImplemented);
-            }
-        } else {
-            return Err(ClientError::NotImplemented);
         }
     }
 
