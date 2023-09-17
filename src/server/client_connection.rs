@@ -22,8 +22,6 @@ pub(crate) enum ClientError {
     #[error("connection reset")]
     ConnectionReset,
 
-    #[error("not implemented")]
-    NotImplemented,
 }
 #[derive(Debug)]
 pub(crate) struct ClientConnection {
@@ -43,7 +41,7 @@ impl ClientConnection {
         loop {
             match self.read_frame().await {
                 Ok(Some(frame)) => {
-                    RequestCommand::try_from(frame)?.handle_command(self).await;
+                    RequestCommand::try_from(frame)?.handle_command(self).await?;
                 }
 
                 Err(ClientError::ConnectionReset) => {

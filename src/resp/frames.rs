@@ -1,8 +1,8 @@
 use bytes::Buf;
 use std::{
+    fmt::Write,
     io::Cursor,
     str::{from_utf8, Utf8Error},
-    fmt::Write
 };
 use thiserror::Error;
 
@@ -34,7 +34,6 @@ impl Frame {
             println!("Cursor is empty");
             return Err(FrameParseError::Incomplete);
         }
-        let start_position = src.position();
         let byte = src.get_u8();
         match byte {
             b'+' => {
@@ -107,13 +106,13 @@ impl ToString for Frame {
     fn to_string(&self) -> String {
         return match self {
             Frame::BulkString(data) => {
-                format!("${}\r\n{}\r\n",data.as_bytes().len(),data)
+                format!("${}\r\n{}\r\n", data.as_bytes().len(), data)
             }
 
             Frame::Array(content) => {
                 let mut result_string = String::with_capacity(2048);
 
-                write!(&mut result_string,"*{}\r\n", content.len()).unwrap();
+                write!(&mut result_string, "*{}\r\n", content.len()).unwrap();
 
                 for frame in content {
                     result_string.push_str(&frame.to_string());
@@ -126,19 +125,16 @@ impl ToString for Frame {
                 format!("-{}\r\n", error)
             }
 
-            Frame::Null => {
-                "_\r\n".to_string()
-            }
+            Frame::Null => "_\r\n".to_string(),
 
             Frame::SimpleString(data) => {
-                format!("+{}\r\n",data)
+                format!("+{}\r\n", data)
             }
 
             Frame::Integer(value) => {
                 format!(":{}\r\n", value)
             }
-            
-        }
+        };
     }
 }
 

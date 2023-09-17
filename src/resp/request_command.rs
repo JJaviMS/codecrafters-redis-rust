@@ -1,3 +1,5 @@
+use std::io;
+
 use super::{super::server::client_connection::ClientConnection, frames::Frame};
 use thiserror::Error;
 
@@ -60,25 +62,26 @@ impl TryFrom<Frame> for RequestCommand {
 }
 
 impl RequestCommand {
-    pub(crate) async fn handle_command(&self, client: &mut ClientConnection) {
-        match self {
+    pub(crate) async fn handle_command(&self, client: &mut ClientConnection) -> io::Result<()> {
+        return match self {
             Self::Ping => handle_ping(client).await,
             Self::Echo(response) => handle_echo(client, response).await,
         }
     }
 }
 
-async fn handle_ping(client: &mut ClientConnection) {
+async fn handle_ping(client: &mut ClientConnection) -> io::Result<()> {
     println!("Answering to ping");
 
-    client.send_to_client("+PONG\r\n").await;
+    let frame_answer = Frame::SimpleString("PONG".to_owned());
+
+    client.send_to_client(&frame_answer.to_string()).await
 }
 
-async fn handle_echo(client: &mut ClientConnection, response: &str) {
+async fn handle_echo(client: &mut ClientConnection, response: &str) -> io::Result<()> {
     println!("Answering to echo");
 
     let frame_answer = Frame::SimpleString(response.to_owned());
 
-
-    client.send_to_client(&frame_answer.to_string()).await;
+    return client.send_to_client(&frame_answer.to_string()).await
 }
