@@ -1,6 +1,6 @@
 use super::{
     super::server::client_connection::ClientConnection,
-    frames::{Frame, FrameParseError},
+    frames::Frame,
 };
 use crate::database::RedisDatabase;
 use std::{io, sync::Arc};
