@@ -140,6 +140,8 @@ fn get_set_command(data: &[Frame]) -> Result<Box<SetOptions>, RequestCommandErro
         None
     };
 
+    println!("Received set with a timeout: {:?}", expiration);
+
     return Ok(Box::new(SetOptions {
         key: key,
         value: value,
