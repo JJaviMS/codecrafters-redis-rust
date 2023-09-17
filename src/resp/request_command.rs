@@ -125,7 +125,7 @@ fn get_set_command(data: &[Frame]) -> Result<Box<SetOptions>, RequestCommandErro
     let expiration: Option<u64> = if data.get(3).is_some_and(|frame| {
         frame
             .extract_string_from_frame()
-            .is_some_and(|frame| frame == "PX")
+            .is_some_and(|frame| frame.to_ascii_lowercase() == "px")
     }) {
         data.get(4).and_then(|frame| {
             if let Frame::Integer(exp) = frame {

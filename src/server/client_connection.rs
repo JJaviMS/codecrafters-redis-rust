@@ -93,8 +93,8 @@ impl ClientConnection {
             return Ok(None);
         }
 
-        let content = String::from_utf8(self.buffer.to_vec()).unwrap();
-        println!("Received content: {}", content);
+        /*let content = String::from_utf8(self.buffer.to_vec()).unwrap();
+        println!("Received content: {}", content);*/
 
         let mut buf = Cursor::new(&self.buffer[..]);
 
