@@ -43,7 +43,7 @@ impl ClientConnection {
         loop {
             match self.read_frame().await {
                 Ok(Some(frame)) => {
-                    RequestCommand::try_from(frame)?.handle_command(self);
+                    RequestCommand::try_from(frame)?.handle_command(self).await;
                 }
 
                 Err(ClientError::ConnectionReset) => {

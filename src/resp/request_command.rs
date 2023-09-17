@@ -27,7 +27,7 @@ impl TryFrom<Frame> for RequestCommand {
             }
 
             if let Frame::BulkString(command) = &value[0] {
-                let command: Self = match command.to_ascii_lowercase().as_str() {
+                let command: Self = match command.to_ascii_lowercase().trim() {
                     "ping" => Self::Ping,
                     "echo" => {
                         if value.len() < 2 {
