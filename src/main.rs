@@ -1,7 +1,7 @@
 use tokio::net::TcpListener;
+mod database;
 pub(crate) mod resp;
 pub(crate) mod server;
-mod database;
 #[tokio::main]
 async fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.

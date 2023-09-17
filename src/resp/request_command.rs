@@ -1,13 +1,17 @@
-use std::{io, sync:: Arc};
-use tokio::sync::RwLock;
-use super::{super::server::client_connection::ClientConnection, frames::Frame};
-use thiserror::Error;
+use super::{
+    super::server::client_connection::ClientConnection,
+    frames::{Frame, FrameParseError},
+};
 use crate::database::RedisDatabase;
+use std::{io, sync::Arc};
+use thiserror::Error;
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct SetOptions {
     key: String,
-    value: String
+    value: String,
+    expiration: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -15,7 +19,7 @@ pub(crate) enum RequestCommand {
     Ping,
     Echo(String),
     Set(Box<SetOptions>),
-    Get(String)
+    Get(String),
 }
 
 #[derive(Debug, Error)]
@@ -50,12 +54,8 @@ impl TryFrom<Frame> for RequestCommand {
                         } else {
                             return Err(RequestCommandError::ParseFramesError);
                         }
-
-                        
                     }
-                    "set" => {
-                        Self::Set(get_set_command(&value)?)
-                    }
+                    "set" => Self::Set(get_set_command(&value)?),
                     "get" => {
                         if value.len() < 2 {
                             return Err(RequestCommandError::ParseFramesError);
@@ -81,13 +81,17 @@ impl TryFrom<Frame> for RequestCommand {
 }
 
 impl RequestCommand {
-    pub(crate) async fn handle_command(&self, client: &mut ClientConnection, database: &Arc<RwLock<RedisDatabase>>) -> io::Result<()> {
+    pub(crate) async fn handle_command(
+        &self,
+        client: &mut ClientConnection,
+        database: &Arc<RwLock<RedisDatabase>>,
+    ) -> io::Result<()> {
         return match self {
             Self::Ping => handle_ping(client).await,
             Self::Echo(response) => handle_echo(client, response).await,
             Self::Set(data) => handle_set(client, database, data).await,
-            Self::Get(key) => handle_get(client,database, key).await
-        }
+            Self::Get(key) => handle_get(client, database, key).await,
+        };
     }
 }
 
@@ -104,34 +108,63 @@ async fn handle_echo(client: &mut ClientConnection, response: &str) -> io::Resul
 
     let frame_answer = Frame::SimpleString(response.to_owned());
 
-    return client.send_to_client(&frame_answer.to_string()).await
+    return client.send_to_client(&frame_answer.to_string()).await;
 }
 
-fn get_set_command(data: &[Frame]) -> Result<Box<SetOptions>,RequestCommandError> {
-    
-    let key = data[1].extract_string_from_frame().ok_or_else(|| RequestCommandError::ParseFramesError)?
+fn get_set_command(data: &[Frame]) -> Result<Box<SetOptions>, RequestCommandError> {
+    let key = data[1]
+        .extract_string_from_frame()
+        .ok_or_else(|| RequestCommandError::ParseFramesError)?
         .to_owned();
-    
-    let value = data[2].extract_string_from_frame().ok_or_else(|| RequestCommandError::ParseFramesError)?
-    .to_owned();
 
-    return Ok(Box::new(SetOptions {key: key, value: value}))
+    let value = data[2]
+        .extract_string_from_frame()
+        .ok_or_else(|| RequestCommandError::ParseFramesError)?
+        .to_owned();
+
+    let expiration: Option<u64> = if data.get(3).is_some_and(|frame| {
+        frame
+            .extract_string_from_frame()
+            .is_some_and(|frame| frame == "PX")
+    }) {
+        data.get(4).and_then(|frame| {
+            if let Frame::Integer(exp) = frame {
+                Some(exp.to_owned())
+            } else if let Some(str) = frame.extract_string_from_frame() {
+                str.parse::<u64>().ok()
+            } else {
+                None
+            }
+        })
+    } else {
+        None
+    };
+
+    return Ok(Box::new(SetOptions {
+        key: key,
+        value: value,
+        expiration: expiration,
+    }));
 }
 
-
-
-
-async fn handle_set(client: &mut ClientConnection, database: &Arc<RwLock<RedisDatabase>>, set: &SetOptions) -> io::Result<()> {
+async fn handle_set(
+    client: &mut ClientConnection,
+    database: &Arc<RwLock<RedisDatabase>>,
+    set: &SetOptions,
+) -> io::Result<()> {
     let mut database = database.write().await;
-    let _ = database.insert(&set.key, &set.value);
+    let _ = database.insert(&set.key, &set.value, set.expiration);
 
     let response = Frame::SimpleString("OK".to_owned());
 
     client.send_to_client(&response.to_string()).await
 }
 
-
-async fn handle_get(client: &mut ClientConnection, database: &Arc<RwLock<RedisDatabase>>, key: &str) -> io::Result<()> {
+async fn handle_get(
+    client: &mut ClientConnection,
+    database: &Arc<RwLock<RedisDatabase>>,
+    key: &str,
+) -> io::Result<()> {
     let database = database.read().await;
     let value = database.get(key);
 

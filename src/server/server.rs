@@ -1,19 +1,22 @@
 use crate::database::RedisDatabase;
 
 use super::client_connection::ClientConnection;
-use tokio::net::TcpListener;
 use std::sync::Arc;
+use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
 pub(crate) struct Server {
     tcp: TcpListener,
-    database: Arc<RwLock<RedisDatabase>>
+    database: Arc<RwLock<RedisDatabase>>,
 }
 
 impl Server {
     pub(crate) fn new(tcp: TcpListener) -> Self {
         let database = Arc::new(RwLock::new(RedisDatabase::new()));
-        return Server { tcp: tcp, database: database };
+        return Server {
+            tcp: tcp,
+            database: database,
+        };
     }
 
     pub(crate) async fn run(&self) {
