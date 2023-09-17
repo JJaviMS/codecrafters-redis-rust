@@ -100,6 +100,17 @@ impl Frame {
             _ => return Err(FrameParseError::InvalidData),
         }
     }
+
+
+    pub(crate) fn extract_string_from_frame(&self) -> Option<&str> {
+        return match self {
+            Frame::BulkString(s) | Frame::SimpleString(s) => {
+                Some(s)
+            }
+
+            _ => None
+        }
+    }
 }
 
 impl ToString for Frame {
