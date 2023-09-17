@@ -133,7 +133,7 @@ impl ToString for Frame {
                 format!("-{}\r\n", error)
             }
 
-            Frame::Null => "_\r\n".to_string(),
+            Frame::Null => "-1\r\n".to_string(),
 
             Frame::SimpleString(data) => {
                 format!("+{}\r\n", data)
