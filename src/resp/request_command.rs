@@ -77,7 +77,8 @@ async fn handle_ping(client: &mut ClientConnection) {
 async fn handle_echo(client: &mut ClientConnection, response: &str) {
     println!("Answering to echo");
 
-    let answer = format!("{}\r\n", response);
+    let frame_answer = Frame::SimpleString(response.to_owned());
 
-    client.send_to_client(&answer).await;
+
+    client.send_to_client(&frame_answer.to_string()).await;
 }

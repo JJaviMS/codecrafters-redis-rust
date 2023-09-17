@@ -2,6 +2,7 @@ use bytes::Buf;
 use std::{
     io::Cursor,
     str::{from_utf8, Utf8Error},
+    fmt::Write
 };
 use thiserror::Error;
 
@@ -98,6 +99,45 @@ impl Frame {
             }
 
             _ => return Err(FrameParseError::InvalidData),
+        }
+    }
+}
+
+impl ToString for Frame {
+    fn to_string(&self) -> String {
+        return match self {
+            Frame::BulkString(data) => {
+                format!("${}\r\n{}\r\n",data.as_bytes().len(),data)
+            }
+
+            Frame::Array(content) => {
+                let mut result_string = String::with_capacity(2048);
+
+                write!(&mut result_string,"*{}\r\n", content.len()).unwrap();
+
+                for frame in content {
+                    result_string.push_str(&frame.to_string());
+                }
+
+                result_string
+            }
+
+            Frame::Error(error) => {
+                format!("-{}\r\n", error)
+            }
+
+            Frame::Null => {
+                "_\r\n".to_string()
+            }
+
+            Frame::SimpleString(data) => {
+                format!("+{}\r\n",data)
+            }
+
+            Frame::Integer(value) => {
+                format!(":{}\r\n", value)
+            }
+            
         }
     }
 }
